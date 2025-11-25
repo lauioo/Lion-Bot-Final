@@ -9,7 +9,10 @@ INTENTS.message_content = False
 OWNER_ID = int(os.getenv("OWNER_ID"))
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-ALLOWED_GUILDS = []
+ALLOWED_GUILDS = [
+    1431698219892478074,
+    1441231445283704943
+]
 
 class ShopBot(commands.Bot):
     def __init__(self):
