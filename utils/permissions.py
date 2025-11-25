@@ -3,10 +3,13 @@ import discord
 import json
 import os
 
+
+# Load config.json manually
 def get_config():
     path = os.path.join(os.path.dirname(__file__), "..", "data", "config.json")
     with open(path, "r") as f:
         return json.load(f)
+
 
 config = get_config()
 
@@ -14,8 +17,6 @@ OWNER_ID = config.get("owner_id")
 STAFF_ROLES = config.get("staff_roles", [])
 ALLOWED_GUILDS = config.get("allowed_guilds", [])
 
-
-# --- BASIC CHECK HELPERS --- #
 
 def is_owner(user_id: int) -> bool:
     return user_id == OWNER_ID
@@ -29,10 +30,11 @@ def is_allowed_guild(guild_id: int) -> bool:
     return guild_id in ALLOWED_GUILDS
 
 
-# --- DECORATORS FOR COMMANDS --- #
+# ------------------------------------------------
+# MAIN PERMISSION CHECKS
+# ------------------------------------------------
 
 def owner_only():
-    """Allows ONLY the bot owner."""
     def predicate(interaction: discord.Interaction):
         if not is_owner(interaction.user.id):
             raise app_commands.CheckFailure("Only the bot owner may use this command.")
@@ -41,20 +43,16 @@ def owner_only():
 
 
 def staff_only():
-    """Allows staff OR owner."""
     def predicate(interaction: discord.Interaction):
         user = interaction.user
         guild = interaction.guild
 
-        # Allow owner ALWAYS
         if is_owner(user.id):
             return True
 
-        # Validate guild
         if not is_allowed_guild(guild.id):
             raise app_commands.CheckFailure("This command cannot be used in this server.")
 
-        # Validate staff role
         if isinstance(user, discord.Member) and is_staff(user):
             return True
 
@@ -63,9 +61,19 @@ def staff_only():
 
 
 def guild_only():
-    """Block commands outside allowed guilds."""
     def predicate(interaction: discord.Interaction):
         if not is_allowed_guild(interaction.guild.id):
             raise app_commands.CheckFailure("This command cannot be used in this server.")
         return True
     return app_commands.check(predicate)
+
+
+# ------------------------------------------------
+# BACKWARDS COMPATIBILITY (required by your cogs)
+# ------------------------------------------------
+
+def require_staff():
+    return staff_only()
+
+def require_allowed_guild():
+    return guild_only()
