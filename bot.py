@@ -23,6 +23,7 @@ class ShopBot(commands.Bot):
         )
 
     async def setup_hook(self):
+        # Copy global commands to allowed guilds (safe)
         for guild_id in ALLOWED_GUILDS:
             guild = discord.Object(id=guild_id)
             self.tree.copy_global_to(guild=guild)
@@ -33,8 +34,8 @@ class ShopBot(commands.Bot):
         await self.load_extension("cogs.tickets")
         await self.load_extension("cogs.discounts")
 
-        for guild_id in ALLOWED_GUILDS:
-            await self.tree.sync(guild=discord.Object(id=guild_id))
+        # 🔥 GLOBAL SYNC ONLY — FIXES YOUR CRASH
+        await self.tree.sync()
 
     async def on_guild_join(self, guild):
         if guild.id not in ALLOWED_GUILDS:
