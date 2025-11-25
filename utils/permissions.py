@@ -77,3 +77,7 @@ def require_staff():
 
 def require_allowed_guild():
     return guild_only()
+
+def require_owner():
+    return owner_only()
+
