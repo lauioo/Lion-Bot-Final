@@ -28,7 +28,6 @@ class ShopBot(commands.Bot):
             self.tree.copy_global_to(guild=guild)
 
         # Load cogs
-        await self.load_extension("cogs.permissions")
         await self.load_extension("cogs.products")
         await self.load_extension("cogs.cart")
         await self.load_extension("cogs.tickets")
