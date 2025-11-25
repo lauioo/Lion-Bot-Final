@@ -1,6 +1,12 @@
 from discord import app_commands
 import discord
-from utils.config import get_config
+import json
+import os
+
+def get_config():
+    path = os.path.join(os.path.dirname(__file__), "..", "data", "config.json")
+    with open(path, "r") as f:
+        return json.load(f)
 
 config = get_config()
 
