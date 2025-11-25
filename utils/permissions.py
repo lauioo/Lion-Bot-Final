@@ -1,81 +1,65 @@
-import discord
 from discord import app_commands
-from utils.data import load_json
+import discord
+from utils.config import get_config
 
-CONFIG_FILE = "data/config.json"
+config = get_config()
 
-# ------------------------------------------------------------
-# Load config helper
-# ------------------------------------------------------------
-def get_config():
-    return load_json(CONFIG_FILE)
-
-
-# ------------------------------------------------------------
-# OWNER CHECK — owner can use ALL commands regardless of roles
-# ------------------------------------------------------------
-async def is_owner(interaction: discord.Interaction) -> bool:
-    config = get_config()
-    owner_id = config.get("owner_id")
-
-    return interaction.user.id == owner_id
+OWNER_ID = config.get("owner_id")
+STAFF_ROLES = config.get("staff_roles", [])
+ALLOWED_GUILDS = config.get("allowed_guilds", [])
 
 
-# ------------------------------------------------------------
-# STAFF CHECK — staff + owner can use Staff commands
-# ------------------------------------------------------------
-async def is_staff(interaction: discord.Interaction) -> bool:
-    config = get_config()
+# --- BASIC CHECK HELPERS --- #
 
-    # Owner bypass
-    if interaction.user.id == config.get("owner_id"):
+def is_owner(user_id: int) -> bool:
+    return user_id == OWNER_ID
+
+
+def is_staff(member: discord.Member) -> bool:
+    return any(role.id in STAFF_ROLES for role in member.roles)
+
+
+def is_allowed_guild(guild_id: int) -> bool:
+    return guild_id in ALLOWED_GUILDS
+
+
+# --- DECORATORS FOR COMMANDS --- #
+
+def owner_only():
+    """Allows ONLY the bot owner."""
+    def predicate(interaction: discord.Interaction):
+        if not is_owner(interaction.user.id):
+            raise app_commands.CheckFailure("Only the bot owner may use this command.")
         return True
-
-    staff_roles = config.get("staff_roles", [])
-
-    # Check if member has any staff role
-    if any(role.id in staff_roles for role in interaction.user.roles):
-        return True
-
-    return False
+    return app_commands.check(predicate)
 
 
-# ------------------------------------------------------------
-# GUILD WHITELIST CHECK
-# ------------------------------------------------------------
-async def in_allowed_guild(interaction: discord.Interaction) -> bool:
-    config = get_config()
-    allowed = config.get("allowed_guilds")
+def staff_only():
+    """Allows staff OR owner."""
+    def predicate(interaction: discord.Interaction):
+        user = interaction.user
+        guild = interaction.guild
 
-    # If no whitelist defined, allow everywhere
-    if not allowed:
-        return True
-
-    return interaction.guild_id in allowed
-
-
-# ------------------------------------------------------------
-# Decorators for App Commands
-# ------------------------------------------------------------
-def require_owner():
-    async def predicate(interaction: discord.Interaction) -> bool:
-        if await is_owner(interaction):
+        # Allow owner ALWAYS
+        if is_owner(user.id):
             return True
+
+        # Validate guild
+        if not is_allowed_guild(guild.id):
+            raise app_commands.CheckFailure("This command cannot be used in this server.")
+
+        # Validate staff role
+        if isinstance(user, discord.Member) and is_staff(user):
+            return True
+
         raise app_commands.CheckFailure("You do not have permission to use this command.")
     return app_commands.check(predicate)
 
 
-def require_staff():
-    async def predicate(interaction: discord.Interaction) -> bool:
-        if await is_staff(interaction):
-            return True
-        raise app_commands.CheckFailure("You do not have permission to use this command.")
-    return app_commands.check(predicate)
-
-
-def require_allowed_guild():
-    async def predicate(interaction: discord.Interaction) -> bool:
-        if await in_allowed_guild(interaction):
-            return True
-        raise app_commands.CheckFailure("This bot is not enabled in this server.")
+def guild_only():
+    """Block commands outside allowed guilds."""
+    def predicate(interaction: discord.Interaction):
+        if not is_allowed_guild(interaction.guild.id):
+            raise app_commands.CheckFailure("This command cannot be used in this server.")
+        return True
     return app_commands.check(predicate)
