@@ -169,7 +169,7 @@ class ProductCommands(commands.Cog):
         await interaction.followup.send(
             f"✏️ Updated **{product['name']}**!\n"
             f"- New price: `${product['price']}`\n"
-            (f"- New stock: {product['stock']}" if stock is not None else ""),
+                (f"- New stock: {product['stock']}" if stock is not None else ""),
             ephemeral=True
         )
 
